@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		000000000000000000000030 /* MoneyPrinter.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = MoneyPrinter.xcconfig; sourceTree = "<group>"; };
+		000000000000000000000031 /* JevSecrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = JevSecrets.example.xcconfig; sourceTree = "<group>"; };
+		000000000000000000000032 /* JevSecrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = JevSecrets.xcconfig; sourceTree = "<group>"; };
 		000000000000000000000120 /* MoneyPrinter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoneyPrinter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -31,6 +34,9 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* MoneyPrinter */,
+				000000000000000000000030 /* MoneyPrinter.xcconfig */,
+				000000000000000000000031 /* JevSecrets.example.xcconfig */,
+				000000000000000000000032 /* JevSecrets.xcconfig */,
 				000000000000000000000020 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -249,7 +255,9 @@
 		};
 		000000000000000111000000 /* Debug configuration for PBXNativeTarget "MoneyPrinter" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 000000000000000000000030 /* MoneyPrinter.xcconfig */;
 			buildSettings = {
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MoneyPrinter.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LUXDLYRG7S;
@@ -259,6 +267,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MoneyPrinter;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_TYPESAFE_API_KEY = "$(TYPESAFE_API_KEY)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -290,7 +299,9 @@
 		};
 		000000000000000112000000 /* Release configuration for PBXNativeTarget "MoneyPrinter" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 000000000000000000000030 /* MoneyPrinter.xcconfig */;
 			buildSettings = {
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MoneyPrinter.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LUXDLYRG7S;
@@ -300,6 +311,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MoneyPrinter;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
+				INFOPLIST_KEY_TYPESAFE_API_KEY = "$(TYPESAFE_API_KEY)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
