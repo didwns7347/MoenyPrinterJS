@@ -1,0 +1,8 @@
+.DS_Store
+xcuserdata/
+DerivedData/
+build/
+
+*.xcconfig
+!MoneyPrinter.xcconfig
+!JevSecrets.example.xcconfig
