@@ -1,15 +1,8 @@
-//
-//  TokenActor.swift
-//  JSMacroChart
-//
-//  Created by yangjs on 7/15/25.
-//
 import Foundation
 
-// MARK: - Token Manager (actor)
 actor TokenManager {
     enum KeychainKey {
-        static let service = "com.jsMacro.KoreaInvestmentAPI"
+        static let service = "com.firejs.MoneyPrinter.korea-investment"
         static let accessToken = "accessToken"
         static let tokenExpiresAt = "expiresIn"
     }
@@ -35,7 +28,6 @@ actor TokenManager {
            let token = String(data: tokenData, encoding: .utf8),
            let expiresAtData = secureStorage.read(service: KeychainKey.service, account: KeychainKey.tokenExpiresAt),
            let expiresAt = try? JSONDecoder().decode(Date.self, from: expiresAtData) {
-//            print("token = ",token)
             return (token, expiresAt)
         }
         return (nil, nil)
@@ -44,7 +36,6 @@ actor TokenManager {
     func getValidToken() async throws -> String {
         let now = Date()
         if let token = token, let expires = expiresAt, expires > now {
-//            print("token=",token)
             return token
         }
         // 이미 발급 중이면 기존 Task를 기다림
@@ -61,7 +52,6 @@ actor TokenManager {
             let expiresAtData = try JSONEncoder().encode(newExpiresAt)
             secureStorage.save(newToken.data(using: .utf8) ?? Data(), service: KeychainKey.service, account: KeychainKey.accessToken)
             secureStorage.save(expiresAtData, service: KeychainKey.service, account: KeychainKey.tokenExpiresAt)
-            // actor 상태 갱신
             self.token = newToken
             self.expiresAt = newExpiresAt
             return newToken

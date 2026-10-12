@@ -65,6 +65,23 @@ final class HTTPClient {
         return try decode(type, from: response.data)
     }
 
+    func postData<Body: Encodable>(_ path: String, body: Body) async throws -> (request: Data, response: Data) {
+        let payload: Data
+        do {
+            payload = try encoder.encode(body)
+        } catch {
+            throw NetworkError.encoding(error.localizedDescription)
+        }
+        let request = HTTPRequest(
+            method: .post,
+            path: path,
+            headers: ["Content-Type": "application/json"],
+            body: payload
+        )
+        let response = try await send(request)
+        return (payload, response.data)
+    }
+
     func send(_ request: HTTPRequest) async throws -> HTTPResponse {
         let urlRequest = try makeURLRequest(request)
         var attempt = 0

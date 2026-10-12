@@ -1,11 +1,14 @@
-// 이 파일을 JevSecrets.xcconfig로 복사한 뒤 키를 넣어 주세요.
-// cp JevSecrets.example.xcconfig JevSecrets.xcconfig
+// 이 파일을 Config.xcconfig로 복사한 뒤 키를 넣어 주세요.
+// cp Config.example.xcconfig Config.xcconfig
 //
 // TypeSafe API key. https://console.typesafe.ai/keys
-// 값을 바꾼 뒤에는 앱을 다시 빌드해야 반영됩니다.
+// 값을 바꾼 뒤에는 앱을 다시 빌드해야 Info.plist에 반영됩니다.
 TYPESAFE_API_KEY =
 // 한국투자증권 API
-APP_KEY = 
-APP_SECRET = 
-CANO = 
+// 모의투자: openapivts.koreainvestment.com:29443
+// 실전투자: openapi.koreainvestment.com:9443
+APP_KEY =
+APP_SECRET =
+CANO =
 ACNT_PRDT_CD =
+URL_BASE = openapivts.koreainvestment.com:29443

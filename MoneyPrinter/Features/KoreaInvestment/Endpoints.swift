@@ -14,6 +14,12 @@ enum KoreaInvestmentEndpoint {
         EXCD: String,
         SYMB: String
     )
+    case fetchOverseasIndexDailyPrice(
+        token: String,
+        symbol: String,
+        startDate: String,
+        endDate: String
+    )
     case fetchDomesticStockBalance(token: String)
     case fetchOverseasStockBalance(
         token: String,
@@ -39,7 +45,7 @@ enum KoreaInvestmentEndpoint {
             method: method,
             path: path,
             query: query,
-            headers: headers,
+            headers: try headerFields(),
             body: try body()
         )
     }
@@ -67,6 +73,8 @@ enum KoreaInvestmentEndpoint {
             return "/uapi/overseas-stock/v1/trading/inquire-psamount"
         case .fetchOverseasDailyPrice:
             return "/uapi/overseas-price/v1/quotations/dailyprice"
+        case .fetchOverseasIndexDailyPrice:
+            return "/uapi/overseas-price/v1/quotations/inquire-daily-chartprice"
         case .fetchDomesticStockPerformance:
             return "/uapi/domestic-stock/v1/finance/income-statement"
         case .fetchDomesticStockInfo:
@@ -84,10 +92,12 @@ enum KoreaInvestmentEndpoint {
             return "FHKST03010100"
         case .fetchOverseasDailyPrice:
             return "HHDFS76240000"
+        case .fetchOverseasIndexDailyPrice:
+            return "FHKST03030100"
         case .fetchDomesticStockBalance:
-            return APIConfigManager.shared.isDemo ? "VTTC8434R" : "TTTC8434R"
+            return APIConfigManager.isDemo ? "VTTC8434R" : "TTTC8434R"
         case .fetchOverseasStockBalance:
-            return APIConfigManager.shared.isDemo ? "VTTS3012R" : "TTTS3012R"
+            return APIConfigManager.isDemo ? "VTTS3012R" : "TTTS3012R"
         case .fetchOverseasAccountBalance:
             return "TTTS3007R"
         case .fetchDomesticStockPerformance:
@@ -115,6 +125,14 @@ enum KoreaInvestmentEndpoint {
                 URLQueryItem(name: "GUBN", value: "0"),
                 URLQueryItem(name: "BYMD", value: ""),
                 URLQueryItem(name: "MODP", value: "0"),
+            ]
+        case .fetchOverseasIndexDailyPrice(_, let symbol, let startDate, let endDate):
+            return [
+                URLQueryItem(name: "FID_COND_MRKT_DIV_CODE", value: "N"),
+                URLQueryItem(name: "FID_INPUT_ISCD", value: symbol),
+                URLQueryItem(name: "FID_INPUT_DATE_1", value: startDate),
+                URLQueryItem(name: "FID_INPUT_DATE_2", value: endDate),
+                URLQueryItem(name: "FID_PERIOD_DIV_CODE", value: "D"),
             ]
         case .fetchDomesticStockBalance:
             return accountItems([
@@ -155,16 +173,17 @@ enum KoreaInvestmentEndpoint {
         }
     }
 
-    private var headers: [String: String] {
+    private func headerFields() throws -> [String: String] {
         switch self {
         case .issueToken:
             return ["content-type": "application/json"]
-        case .fetchDomesticStockPerformance(let token, _):
-            var headers = authHeaders(token: token, trID: transactionID ?? "")
+        case .fetchDomesticStockPerformance(let token, _),
+             .fetchOverseasIndexDailyPrice(let token, _, _, _):
+            var headers = try authHeaders(token: token, trID: transactionID ?? "")
             headers["custtype"] = "P"
             return headers
         default:
-            return authHeaders(token: accessToken, trID: transactionID ?? "", keepAlive: keepsConnection)
+            return try authHeaders(token: accessToken, trID: transactionID ?? "", keepAlive: keepsConnection)
         }
     }
 
@@ -174,6 +193,7 @@ enum KoreaInvestmentEndpoint {
             return ""
         case .fetchDailyPrice(let token, _, _, _, _),
              .fetchOverseasDailyPrice(let token, _, _),
+             .fetchOverseasIndexDailyPrice(let token, _, _, _),
              .fetchDomesticStockBalance(let token),
              .fetchOverseasStockBalance(let token, _, _),
              .fetchOverseasAccountBalance(let token, _),
@@ -185,7 +205,7 @@ enum KoreaInvestmentEndpoint {
 
     private var keepsConnection: Bool {
         switch self {
-        case .fetchDomesticStockInfo, .fetchDailyPrice, .fetchOverseasDailyPrice:
+        case .fetchDomesticStockInfo, .fetchDailyPrice, .fetchOverseasDailyPrice, .fetchOverseasIndexDailyPrice:
             return true
         default:
             return false
@@ -195,9 +215,10 @@ enum KoreaInvestmentEndpoint {
     private func body() throws -> Data? {
         switch self {
         case .issueToken:
+            let config = try APIConfigManager.load()
             let payload = IssueTokenBody(
-                appkey: APIConfigManager.shared.appKey,
-                appsecret: APIConfigManager.shared.appSecret
+                appkey: config.appKey,
+                appsecret: config.appSecret
             )
             do {
                 return try JSONEncoder().encode(payload)
@@ -209,12 +230,13 @@ enum KoreaInvestmentEndpoint {
         }
     }
 
-    private func authHeaders(token: String, trID: String, keepAlive: Bool = false) -> [String: String] {
+    private func authHeaders(token: String, trID: String, keepAlive: Bool = false) throws -> [String: String] {
+        let config = try APIConfigManager.load()
         var headers = [
             "content-type": "application/json",
             "Authorization": "Bearer \(token)",
-            "appkey": APIConfigManager.shared.appKey,
-            "appsecret": APIConfigManager.shared.appSecret,
+            "appkey": config.appKey,
+            "appsecret": config.appSecret,
             "tr_id": trID,
         ]
         if keepAlive {
@@ -224,9 +246,10 @@ enum KoreaInvestmentEndpoint {
     }
 
     private func accountItems(_ more: [URLQueryItem]) -> [URLQueryItem] {
-        [
-            URLQueryItem(name: "CANO", value: APIConfigManager.shared.cano),
-            URLQueryItem(name: "ACNT_PRDT_CD", value: APIConfigManager.shared.accountCode),
+        let config = try? APIConfigManager.load()
+        return [
+            URLQueryItem(name: "CANO", value: config?.cano ?? ""),
+            URLQueryItem(name: "ACNT_PRDT_CD", value: config?.accountCode ?? ""),
         ] + more
     }
 
@@ -249,6 +272,16 @@ enum KoreaInvestmentEndpoint {
         assert(overseas.path == "/uapi/overseas-price/v1/quotations/dailyprice")
         assert(overseas.transactionID == "HHDFS76240000")
         assert(overseas.query.contains(URLQueryItem(name: "GUBN", value: "0")))
+        let index = KoreaInvestmentEndpoint.fetchOverseasIndexDailyPrice(
+            token: "t",
+            symbol: "SPX",
+            startDate: "20260101",
+            endDate: "20260401"
+        )
+        assert(index.path == "/uapi/overseas-price/v1/quotations/inquire-daily-chartprice")
+        assert(index.transactionID == "FHKST03030100")
+        assert(index.query.contains(URLQueryItem(name: "FID_INPUT_ISCD", value: "SPX")))
+        assert(index.query.contains(URLQueryItem(name: "FID_COND_MRKT_DIV_CODE", value: "N")))
     }()
 }
 

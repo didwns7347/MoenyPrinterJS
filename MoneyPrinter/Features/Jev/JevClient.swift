@@ -64,13 +64,40 @@ final class JevClient {
         questions: [String: JevQuestion],
         model: String? = nil
     ) async throws -> JevSystemOneResponse {
+        try await systemOneRaw(state: state, questions: questions, model: model).response
+    }
+
+    func systemOneRaw<State: Encodable>(
+        state: State,
+        questions: [String: JevQuestion],
+        model: String? = nil
+    ) async throws -> (response: JevSystemOneResponse, requestJSON: String, responseJSON: String) {
         try validate(questions)
         let body = RequestBody(
             state: state,
             model: model ?? defaultModel,
             questions: questions
         )
-        return try await http.post("v1/systemone", body: body)
+        let (requestData, responseData) = try await http.postData("v1/systemone", body: body)
+        let response: JevSystemOneResponse
+        do {
+            response = try JSONDecoder().decode(JevSystemOneResponse.self, from: responseData)
+        } catch {
+            throw NetworkError.decoding(String(describing: error))
+        }
+        return (response, Self.prettyJSON(requestData), Self.prettyJSON(responseData))
+    }
+
+    private static func prettyJSON(_ data: Data) -> String {
+        guard let object = try? JSONSerialization.jsonObject(with: data),
+              let pretty = try? JSONSerialization.data(
+                withJSONObject: object,
+                options: [.prettyPrinted, .sortedKeys]
+              ),
+              let text = String(data: pretty, encoding: .utf8) else {
+            return String(data: data, encoding: .utf8) ?? ""
+        }
+        return text
     }
 
     func listModels() async throws -> [JevModelCard] {
