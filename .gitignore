@@ -5,4 +5,4 @@ build/
 
 *.xcconfig
 !MoneyPrinter.xcconfig
-!JevSecrets.example.xcconfig
+!Config.example.xcconfig
