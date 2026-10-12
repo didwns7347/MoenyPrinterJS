@@ -1,1 +1,1 @@
-#include? "JevSecrets.xcconfig"
+#include? "Config.xcconfig"
