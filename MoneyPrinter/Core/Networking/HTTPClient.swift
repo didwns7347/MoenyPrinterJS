@@ -104,6 +104,11 @@ final class HTTPClient {
         }
     }
 
+    func send<Response: Decodable>(_ request: HTTPRequest, as type: Response.Type) async throws -> Response {
+        let response = try await send(request)
+        return try decode(type, from: response.data)
+    }
+
     private func makeURLRequest(_ request: HTTPRequest) throws -> URLRequest {
         let pathURL = request.path.split(separator: "/").reduce(baseURL) { partial, component in
             partial.appending(path: String(component))

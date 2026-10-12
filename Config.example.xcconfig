@@ -4,3 +4,8 @@
 // TypeSafe API key. https://console.typesafe.ai/keys
 // 값을 바꾼 뒤에는 앱을 다시 빌드해야 반영됩니다.
 TYPESAFE_API_KEY =
+// 한국투자증권 API
+APP_KEY = 
+APP_SECRET = 
+CANO = 
+ACNT_PRDT_CD =
