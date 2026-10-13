@@ -10,7 +10,7 @@ enum CashWeightMarket: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .kodexSP500: "KODEX SNP"
+        case .kodexSP500: "KODEX SNP500(H)"
         case .kodex200: "KODEX 200"
         }
     }
@@ -36,6 +36,7 @@ enum CashWeightMarket: String, CaseIterable, Identifiable {
         - Returns over the prior 21, 63, and 126 trading days
         - Annualized volatility of daily returns over 20 and 60 trading days
         - Change from the highest high of the last 200 trading days
+        - Histogram of the 12-trading-day exponential moving average minus the 26-trading-day exponential moving average, minus its 9-trading-day signal, as a percent of the closing price. Positive means the shorter upward pace is still above that signal.
 
         Do not treat a high absolute price as evidence of overvaluation. Do not treat a recent decline alone as evidence that the market is cheap or that a rebound is imminent. Avoid counting correlated indicators as independent evidence.
 

@@ -101,12 +101,13 @@ final class HTTPClient {
             guard let http = response as? HTTPURLResponse else {
                 throw NetworkError.invalidResponse("HTTP 응답이 아닙니다.")
             }
-            if (200..<300).contains(http.statusCode) {
+            if (200 ..< 300).contains(http.statusCode) {
                 return HTTPResponse(data: data, response: http)
             }
 
             if retryPolicy.retryableStatusCodes.contains(http.statusCode),
-               attempt < retryPolicy.maxRetries {
+               attempt < retryPolicy.maxRetries
+            {
                 let delay = retryDelay(attempt: attempt, response: http)
                 attempt += 1
                 try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
@@ -180,7 +181,8 @@ final class HTTPClient {
             }
             if let error = json["error"] as? [String: Any],
                let message = error["message"] as? String,
-               !message.isEmpty {
+               !message.isEmpty
+            {
                 return message
             }
             if let error = json["error"] as? String, !error.isEmpty {

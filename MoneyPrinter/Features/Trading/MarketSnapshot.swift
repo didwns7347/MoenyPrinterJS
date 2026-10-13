@@ -28,6 +28,8 @@ struct MarketSnapshot: Codable {
     let return1mPct: Double
     let return3mPct: Double
     let return6mPct: Double
+    /// 12거래일 지수이동평균에서 26거래일 지수이동평균을 뺀 값과, 그 차이의 9거래일 지수이동평균 사이 간격. 종가 대비 퍼센트입니다. 양수면 짧은 상승 속도가 아직 남아 있습니다.
+    let macdHistogramAsPercentOfClose: Double?
 
     enum CodingKeys: String, CodingKey {
         case ticker = "index_symbol"
@@ -44,6 +46,7 @@ struct MarketSnapshot: Codable {
         case return1mPct = "percent_return_over_prior_21_trading_days"
         case return3mPct = "percent_return_over_prior_63_trading_days"
         case return6mPct = "percent_return_over_prior_126_trading_days"
+        case macdHistogramAsPercentOfClose = "histogram_of_12_minus_26_trading_day_exponential_moving_average_as_percent_of_closing_price"
     }
 
     init(bars: [IndexDailyBar], ticker: String = "SPX") throws {
@@ -79,6 +82,7 @@ struct MarketSnapshot: Codable {
         self.return1mPct = Self.gapPercent(price: price, average: closes[closes.count - 1 - 21])
         self.return3mPct = Self.gapPercent(price: price, average: closes[closes.count - 1 - 63])
         self.return6mPct = Self.gapPercent(price: price, average: closes[closes.count - 1 - 126])
+        self.macdHistogramAsPercentOfClose = Self.macdHistogramPercent(closes)
     }
 
     private static func mean(_ values: [Double], period: Int) -> Double {
@@ -99,6 +103,28 @@ struct MarketSnapshot: Codable {
         let mean = returns.reduce(0, +) / count
         let variance = returns.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / (count - 1)
         return variance.squareRoot() * (252 as Double).squareRoot() * 100
+    }
+
+    /// 12, 26, 9 거래일. 각 지수이동평균은 첫 구간의 단순평균에서 시작합니다.
+    private static func macdHistogramPercent(_ closes: [Double]) -> Double? {
+        let fast = exponentialMovingAverage(closes, period: 12)
+        let slow = exponentialMovingAverage(closes, period: 26)
+        guard let price = closes.last, price > 0, !slow.isEmpty else { return nil }
+        let macd = zip(fast.suffix(slow.count), slow).map { $0 - $1 }
+        guard let macdNow = macd.last, let signalNow = exponentialMovingAverage(macd, period: 9).last else { return nil }
+        return (macdNow - signalNow) / price * 100
+    }
+
+    private static func exponentialMovingAverage(_ values: [Double], period: Int) -> [Double] {
+        guard values.count >= period, period > 0 else { return [] }
+        var average = values.prefix(period).reduce(0, +) / Double(period)
+        var averages = [average]
+        let weight = 2 / Double(period + 1)
+        for value in values.dropFirst(period) {
+            average = (value - average) * weight + average
+            averages.append(average)
+        }
+        return averages
     }
 
     private static func isoDate(_ yyyymmdd: String) -> String {

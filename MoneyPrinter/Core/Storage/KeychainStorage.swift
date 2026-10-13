@@ -7,7 +7,7 @@
 import Foundation
 import Security
 
-final class KeychainStorage: StorageProtocol {
+nonisolated final class KeychainStorage: StorageProtocol, Sendable {
     static let shared = KeychainStorage()
     private init() {}
     

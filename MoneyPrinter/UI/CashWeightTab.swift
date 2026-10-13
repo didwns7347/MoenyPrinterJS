@@ -151,6 +151,11 @@ struct CashWeightTab: View {
             MetricRow(title: "20거래일 일간 수익률", value: DisplayNumber.percent(snapshot.volatility20dPct), tone: nil)
             MetricRow(title: "60거래일 일간 수익률", value: DisplayNumber.percent(snapshot.volatility60dPct), tone: nil)
         }
+        if let histogram = snapshot.macdHistogramAsPercentOfClose {
+            Section("탄력") {
+                MetricRow(title: "MACD 히스토그램", value: DisplayNumber.percent(histogram), tone: histogram)
+            }
+        }
         Section("수익률") {
             MetricRow(title: "21거래일", value: DisplayNumber.percent(snapshot.return1mPct), tone: snapshot.return1mPct)
             MetricRow(title: "63거래일", value: DisplayNumber.percent(snapshot.return3mPct), tone: snapshot.return3mPct)
@@ -217,6 +222,9 @@ private struct CashWeightDetail: View {
                 MetricRow(title: "200거래일 이동평균 대비", value: DisplayNumber.percent(record.snapshot.priceVsMa200Pct), tone: record.snapshot.priceVsMa200Pct)
                 MetricRow(title: "200거래일 이동평균의 20거래일 변화", value: DisplayNumber.percent(record.snapshot.ma200Slope20dPct), tone: record.snapshot.ma200Slope20dPct)
                 MetricRow(title: "200거래일 최고가 대비", value: DisplayNumber.percent(record.snapshot.drawdownFrom200dHighPct), tone: record.snapshot.drawdownFrom200dHighPct)
+                if let histogram = record.snapshot.macdHistogramAsPercentOfClose {
+                    MetricRow(title: "MACD 히스토그램", value: DisplayNumber.percent(histogram), tone: histogram)
+                }
                 MetricRow(title: "20거래일 연율 변동성", value: DisplayNumber.percent(record.snapshot.volatility20dPct), tone: nil)
                 MetricRow(title: "60거래일 연율 변동성", value: DisplayNumber.percent(record.snapshot.volatility60dPct), tone: nil)
                 MetricRow(title: "21거래일", value: DisplayNumber.percent(record.snapshot.return1mPct), tone: record.snapshot.return1mPct)
