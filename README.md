@@ -30,6 +30,14 @@ Jev는 현금 0·25·50·75·100% 다섯 기준에 확률을 매겨 답하고, �
 - **21·63·126거래일 수익률.** 약 1·3·6개월 동안의 성과입니다. 세 기간의 방향이 같은지, 짧은 기간만 엇갈리는지 봅니다.
 - **MACD 히스토그램(12·26·9)의 종가 대비 퍼센트.** 짧은 상승 속도가 최근 평균보다 빨라지는지 느려지는지 봅니다. 양수면 탄력이 남아 있고, 음수로 돌아서면 상승 힘이 약해지고 있습니다. 종가 대비 퍼센트라 가격 수준이 다른 종목끼리도 같은 눈금으로 읽습니다.
 
+아래 세 개는 무릎과 어깨를 보는 변화 지표입니다. 하루치 값만으로는 회복 중인지 꺾이는 중인지 구분할 수 없어서, 방향을 코드가 계산해 넣습니다.
+
+- **MACD 히스토그램의 5거래일 변화.** 지금 히스토그램에서 5거래일 전 값을 뺀 차이입니다. 히스토그램이 음수여도 이 값이 양수면 회복 중이고, 히스토그램이 양수여도 이 값이 음수면 꺾이는 중입니다.
+- **20거래일 이동평균의 5거래일 변화.** 단기 추세가 막 고개를 드는지, 숙이는지 봅니다. 200거래일 평균의 기울기보다 훨씬 빨리 바뀝니다.
+- **종가가 60거래일 이동평균을 마지막으로 넘거나 깬 뒤 지난 거래일 수.** 중기 추세가 바뀐 지 얼마나 됐는지 봅니다. 위인지 아래인지는 60거래일 평균 대비 괴리의 부호로 압니다. 며칠 안 됐으면 막 바뀐 것이고, 오래됐으면 추세가 자리 잡은 것입니다.
+
+질문에는 "하락 뒤 회복이 확인되면 비중을 늘리고, 고점 근처에서 상승 힘이 꺾인 게 확인되면 줄인다. 정확한 바닥이나 꼭대기는 노리지 않는다"는 목표를 적어 두었습니다.
+
 계산식과 JSON 키는 [지표](#지표) 절에 있습니다.
 
 ## 종목
@@ -85,6 +93,9 @@ enum CodingKeys: String, CodingKey {
     case return3mPct = "percent_return_over_prior_63_trading_days"
     case return6mPct = "percent_return_over_prior_126_trading_days"
     case macdHistogramAsPercentOfClose = "histogram_of_12_minus_26_trading_day_exponential_moving_average_as_percent_of_closing_price"
+    case macdHistogramChangeOver5dPct = "change_over_prior_5_trading_days_of_histogram_of_12_minus_26_trading_day_exponential_moving_average_in_percentage_points"
+    case ma20Slope5dPct = "percent_change_of_20_trading_day_moving_average_over_prior_5_trading_days"
+    case tradingDaysSinceCloseCrossedMa60 = "trading_days_since_close_last_crossed_60_trading_day_moving_average"
 }
 ```
 

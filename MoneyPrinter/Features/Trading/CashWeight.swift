@@ -28,7 +28,9 @@ enum CashWeightMarket: String, CaseIterable, Identifiable {
 
         Use only the supplied MarketSnapshot derived from daily prices. Do not use external data, fundamentals, news, or macroeconomic assumptions.
 
-        The portfolio is reviewed weekly and has a long-term investment horizon. The objective is to participate in sustained market advances while reducing exposure during persistent downtrends and elevated market risk.
+        The portfolio is reviewed daily and has a long-term investment horizon. The objective is to participate in sustained market advances while reducing exposure during persistent downtrends and elevated market risk.
+
+        Raise the ETF allocation once a recovery after a decline is confirmed, and lower it once upward momentum near a high is confirmed to be fading. Do not try to catch the exact bottom or the exact top.
 
         Evaluate the supplied indicators jointly:
         - Price relative to the 20-, 60-, and 200-trading-day moving averages
@@ -37,6 +39,9 @@ enum CashWeightMarket: String, CaseIterable, Identifiable {
         - Annualized volatility of daily returns over 20 and 60 trading days
         - Change from the highest high of the last 200 trading days
         - Histogram of the 12-trading-day exponential moving average minus the 26-trading-day exponential moving average, minus its 9-trading-day signal, as a percent of the closing price. Positive means the shorter upward pace is still above that signal.
+        - Change of that histogram over the prior 5 trading days. Positive means momentum is strengthening, negative means it is fading.
+        - Percent change of the 20-trading-day moving average over the prior 5 trading days
+        - Trading days since the close last crossed the 60-trading-day moving average. Whether the close is now above or below that average is given by the price relative to the 60-trading-day moving average. If no cross occurred in the available history, the value is the number of trading days checked.
 
         Do not treat a high absolute price as evidence of overvaluation. Do not treat a recent decline alone as evidence that the market is cheap or that a rebound is imminent. Avoid counting correlated indicators as independent evidence.
 

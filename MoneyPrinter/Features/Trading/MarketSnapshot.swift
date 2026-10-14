@@ -30,6 +30,12 @@ struct MarketSnapshot: Codable {
     let return6mPct: Double
     /// 12거래일 지수이동평균에서 26거래일 지수이동평균을 뺀 값과, 그 차이의 9거래일 지수이동평균 사이 간격. 종가 대비 퍼센트입니다. 양수면 짧은 상승 속도가 아직 남아 있습니다.
     let macdHistogramAsPercentOfClose: Double?
+    /// 지금 MACD 히스토그램에서 5거래일 전 값을 뺀 차이. 단위는 퍼센트 포인트입니다. 양수면 탄력이 살아나고 있습니다.
+    let macdHistogramChangeOver5dPct: Double?
+    /// 20거래일 이동평균이 5거래일 전 값보다 변한 정도. 단위는 퍼센트 포인트입니다.
+    let ma20Slope5dPct: Double?
+    /// 종가가 60거래일 이동평균을 마지막으로 넘거나 깬 뒤 지난 거래일 수. 교차가 없으면 확인한 거래일 수입니다.
+    let tradingDaysSinceCloseCrossedMa60: Int?
 
     enum CodingKeys: String, CodingKey {
         case ticker = "index_symbol"
@@ -47,6 +53,9 @@ struct MarketSnapshot: Codable {
         case return3mPct = "percent_return_over_prior_63_trading_days"
         case return6mPct = "percent_return_over_prior_126_trading_days"
         case macdHistogramAsPercentOfClose = "histogram_of_12_minus_26_trading_day_exponential_moving_average_as_percent_of_closing_price"
+        case macdHistogramChangeOver5dPct = "change_over_prior_5_trading_days_of_histogram_of_12_minus_26_trading_day_exponential_moving_average_in_percentage_points"
+        case ma20Slope5dPct = "percent_change_of_20_trading_day_moving_average_over_prior_5_trading_days"
+        case tradingDaysSinceCloseCrossedMa60 = "trading_days_since_close_last_crossed_60_trading_day_moving_average"
     }
 
     init(bars: [IndexDailyBar], ticker: String = "SPX") throws {
@@ -82,7 +91,16 @@ struct MarketSnapshot: Codable {
         self.return1mPct = Self.gapPercent(price: price, average: closes[closes.count - 1 - 21])
         self.return3mPct = Self.gapPercent(price: price, average: closes[closes.count - 1 - 63])
         self.return6mPct = Self.gapPercent(price: price, average: closes[closes.count - 1 - 126])
-        self.macdHistogramAsPercentOfClose = Self.macdHistogramPercent(closes)
+        let histograms = Self.macdHistogramPercents(closes)
+        self.macdHistogramAsPercentOfClose = histograms.last
+        self.macdHistogramChangeOver5dPct = histograms.count > 5
+            ? histograms[histograms.count - 1] - histograms[histograms.count - 6]
+            : nil
+        self.ma20Slope5dPct = Self.gapPercent(
+            price: Self.mean(closes, period: 20),
+            average: Self.mean(Array(closes.dropLast(5)), period: 20)
+        )
+        self.tradingDaysSinceCloseCrossedMa60 = Self.tradingDaysSinceCloseCrossedAverage(closes, period: 60)
     }
 
     private static func mean(_ values: [Double], period: Int) -> Double {
@@ -105,14 +123,29 @@ struct MarketSnapshot: Codable {
         return variance.squareRoot() * (252 as Double).squareRoot() * 100
     }
 
-    /// 12, 26, 9 거래일. 각 지수이동평균은 첫 구간의 단순평균에서 시작합니다.
-    private static func macdHistogramPercent(_ closes: [Double]) -> Double? {
+    /// 12, 26, 9 거래일. 각 지수이동평균은 첫 구간의 단순평균에서 시작합니다. 마지막 값이 오늘이고, 각 값은 그날 종가 대비 퍼센트입니다.
+    private static func macdHistogramPercents(_ closes: [Double]) -> [Double] {
         let fast = exponentialMovingAverage(closes, period: 12)
         let slow = exponentialMovingAverage(closes, period: 26)
-        guard let price = closes.last, price > 0, !slow.isEmpty else { return nil }
         let macd = zip(fast.suffix(slow.count), slow).map { $0 - $1 }
-        guard let macdNow = macd.last, let signalNow = exponentialMovingAverage(macd, period: 9).last else { return nil }
-        return (macdNow - signalNow) / price * 100
+        let signal = exponentialMovingAverage(macd, period: 9)
+        return zip(zip(macd.suffix(signal.count), signal), closes.suffix(signal.count)).map { pair, close in
+            (pair.0 - pair.1) / close * 100
+        }
+    }
+
+    private static func tradingDaysSinceCloseCrossedAverage(_ closes: [Double], period: Int) -> Int {
+        func isAbove(_ index: Int) -> Bool {
+            let average = closes[(index - period + 1) ... index].reduce(0, +) / Double(period)
+            return closes[index] >= average
+        }
+        let last = closes.count - 1
+        let side = isAbove(last)
+        var index = last
+        while index - 1 >= period - 1, isAbove(index - 1) == side {
+            index -= 1
+        }
+        return last - index
     }
 
     private static func exponentialMovingAverage(_ values: [Double], period: Int) -> [Double] {

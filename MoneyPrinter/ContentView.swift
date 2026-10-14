@@ -15,6 +15,10 @@ struct ContentView: View {
                 .tabItem {
                     Label("비중", systemImage: "chart.pie")
                 }
+            HistoryTab()
+                .tabItem {
+                    Label("기록", systemImage: "clock.arrow.circlepath")
+                }
         }
     }
 }

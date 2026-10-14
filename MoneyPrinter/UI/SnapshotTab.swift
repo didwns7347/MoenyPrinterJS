@@ -73,11 +73,7 @@ struct SnapshotTab: View {
                 MetricRow(title: "20거래일 일간 수익률", value: DisplayNumber.percent(snapshot.volatility20dPct), tone: nil)
                 MetricRow(title: "60거래일 일간 수익률", value: DisplayNumber.percent(snapshot.volatility60dPct), tone: nil)
             }
-            if let histogram = snapshot.macdHistogramAsPercentOfClose {
-                Section("탄력") {
-                    MetricRow(title: "MACD 히스토그램", value: DisplayNumber.percent(histogram), tone: histogram)
-                }
-            }
+            MomentumSection(snapshot: snapshot)
             Section("수익률") {
                 MetricRow(title: "21거래일", value: DisplayNumber.percent(snapshot.return1mPct), tone: snapshot.return1mPct)
                 MetricRow(title: "63거래일", value: DisplayNumber.percent(snapshot.return3mPct), tone: snapshot.return3mPct)

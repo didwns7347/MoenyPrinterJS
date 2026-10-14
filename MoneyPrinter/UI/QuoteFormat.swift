@@ -14,6 +14,32 @@ struct MetricRow: View {
     }
 }
 
+struct MomentumSection: View {
+    let snapshot: MarketSnapshot
+
+    var body: some View {
+        if snapshot.macdHistogramAsPercentOfClose != nil || snapshot.ma20Slope5dPct != nil {
+            Section("탄력") {
+                if let histogram = snapshot.macdHistogramAsPercentOfClose {
+                    MetricRow(title: "MACD 히스토그램", value: DisplayNumber.percent(histogram), tone: histogram)
+                }
+                if let change = snapshot.macdHistogramChangeOver5dPct {
+                    MetricRow(title: "MACD 히스토그램 5거래일 변화", value: DisplayNumber.percent(change) + "p", tone: change)
+                }
+                if let slope = snapshot.ma20Slope5dPct {
+                    MetricRow(title: "20거래일 이동평균의 5거래일 변화", value: DisplayNumber.percent(slope), tone: slope)
+                }
+                if let days = snapshot.tradingDaysSinceCloseCrossedMa60 {
+                    LabeledContent(
+                        "60거래일 이동평균 \(snapshot.priceVsMa60Pct >= 0 ? "위" : "아래")에서",
+                        value: "\(days)거래일째"
+                    )
+                }
+            }
+        }
+    }
+}
+
 enum QuoteTone {
     static func color(_ value: Double?) -> Color {
         guard let value, value != 0 else { return .primary }
