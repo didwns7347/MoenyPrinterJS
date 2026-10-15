@@ -23,24 +23,26 @@ private final class CashWeightScreen {
         }
 
         let store = CashWeightStore.shared
-        let day = CashWeightStore.seoulDay()
         do {
             let snapshot = try await market.makeSnapshot()
-            let client = try JevClient.fromEnvironment()
-            let previous = store.history(ticker: market.ticker).first { $0.day != day }?.fraction ?? 1
-            _ = try await CashWeight.ask(
-                snapshot: snapshot,
-                previousFraction: previous,
-                client: client,
-                question: market.question,
-                store: store
-            )
+            if store.record(on: snapshot.asOf, ticker: market.ticker)?.samples.isEmpty ?? true {
+                let client = try JevClient.fromEnvironment()
+                let previous = store.history(ticker: market.ticker).first { $0.day < snapshot.asOf }?.fraction ?? 1
+                _ = try await CashWeight.ask(
+                    snapshot: snapshot,
+                    previousFraction: previous,
+                    client: client,
+                    question: market.question,
+                    store: store
+                )
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
         guard generation == reloadGeneration else { return }
-        today = store.record(on: day, ticker: market.ticker)
-        history = store.history(ticker: market.ticker).filter { $0.day != day }
+        let records = store.history(ticker: market.ticker)
+        today = records.first
+        history = Array(records.dropFirst())
     }
 }
 
@@ -64,7 +66,7 @@ struct CashWeightTab: View {
                     if let today = screen.today {
                         recordList(today)
                     } else if screen.isLoading {
-                        ProgressView("\(screen.market.title) 현금 비중을 판단하는 중")
+                        ProgressView("\(screen.market.title) 현금 비중을 \(CashWeight.sampleCount)번 판단하는 중")
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ContentUnavailableView {
@@ -90,13 +92,14 @@ struct CashWeightTab: View {
 
     private func recordList(_ today: CashWeightRecord) -> some View {
         List {
-            Section("오늘 판단") {
+            Section {
                 LabeledContent("지표", value: screen.market.title)
-                LabeledContent("날짜", value: today.day)
+                LabeledContent("종가 기준일", value: today.day)
                 LabeledContent("현금", value: percent(today.fraction))
                 LabeledContent("주식", value: percent(1 - today.fraction))
                 LabeledContent("Score", value: DisplayNumber.decimal(today.score, digits: 2))
                 LabeledContent("confidence", value: DisplayNumber.decimal(today.confidence, digits: 2))
+                SampleRows(samples: today.samples)
                 if today.heldPrevious {
                     Text("confidence가 0.5 미만이라 어제 현금 비중 \(percent(today.previousFraction))을 유지했습니다.")
                         .font(.footnote)
@@ -104,6 +107,10 @@ struct CashWeightTab: View {
                 }
                 LabeledContent("모델", value: today.model)
                 LabeledContent("입력 토큰", value: DisplayNumber.decimal(Double(today.inputTokens), digits: 0))
+            } header: {
+                Text("최근 판단")
+            } footer: {
+                Text("거래일마다 한 번, 장 마감 뒤 확정된 종가로 \(CashWeight.sampleCount)번 물어 평균을 냅니다. 장중에는 직전 거래일 판단을 보여 줍니다.")
             }
             JSONSection(title: "요청 JSON", json: today.requestJSON)
             JSONSection(title: "응답 JSON", json: today.responseJSON)
@@ -173,6 +180,21 @@ struct CashWeightTab: View {
     }
 }
 
+private struct SampleRows: View {
+    let samples: [CashWeightSample]
+
+    var body: some View {
+        ForEach(Array(samples.enumerated()), id: \.offset) { index, sample in
+            LabeledContent("\(index + 1)회차") {
+                Text("Score \(DisplayNumber.decimal(sample.score, digits: 2)) · confidence \(DisplayNumber.decimal(sample.confidence, digits: 2))")
+                    .monospacedDigit()
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        }
+    }
+}
+
 private struct JSONSection: View {
     let title: String
     let json: String
@@ -202,6 +224,7 @@ struct CashWeightDetail: View {
                 LabeledContent("주식", value: DisplayNumber.decimal((1 - record.fraction) * 100, digits: 1) + "%")
                 LabeledContent("Score", value: DisplayNumber.decimal(record.score, digits: 2))
                 LabeledContent("confidence", value: DisplayNumber.decimal(record.confidence, digits: 2))
+                SampleRows(samples: record.samples)
                 LabeledContent("모델", value: record.model)
             }
             JSONSection(title: "요청 JSON", json: record.requestJSON)

@@ -56,12 +56,13 @@ enum CashWeightMarket: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 정규장 종가가 정해진 일봉만 씁니다.
     func makeSnapshot() async throws -> MarketSnapshot {
         switch self {
         case .kodexSP500:
-            try await KoreaInvestmentAPIService.shared.makeKODEXUSSP500HSnapshot()
+            try await KoreaInvestmentAPIService.shared.makeKODEXUSSP500HSnapshot(closedOnly: true)
         case .kodex200:
-            try await KoreaInvestmentAPIService.shared.makeKODEX200Snapshot()
+            try await KoreaInvestmentAPIService.shared.makeKODEX200Snapshot(closedOnly: true)
         }
     }
 }
@@ -69,6 +70,8 @@ enum CashWeightMarket: String, CaseIterable, Identifiable {
 /// Jev Score로 정한 현금 비중. 0은 전액 주식, 1은 전액 현금입니다.
 struct CashWeight {
     static let questionID = "cash_weight"
+    /// 같은 스냅샷으로 물어 평균을 내는 횟수.
+    static let sampleCount = 3
 
     static let criteria = [
         "0% cash. Maximum allocation to the ETF.",
@@ -92,26 +95,39 @@ struct CashWeight {
         store: CashWeightStore? = nil
     ) async throws -> CashWeight {
         let store = store ?? CashWeightStore.shared
-        let day = CashWeightStore.seoulDay()
-        let (response, requestJSON, responseJSON) = try await client.systemOneRaw(
-            state: snapshot,
-            questions: [
-                questionID: .score(question, criteria: criteria),
-            ]
-        )
-        guard let answer = response.answers[questionID],
-              let score = answer.score,
-              let confidence = answer.confidence
-        else {
-            throw CashWeightError.missingScore
+        var samples: [CashWeightSample] = []
+        var model = ""
+        var requestJSON = ""
+        var responseJSONs: [String] = []
+        for _ in 0 ..< sampleCount {
+            let (response, request, responseJSON) = try await client.systemOneRaw(
+                state: snapshot,
+                questions: [
+                    questionID: .score(question, criteria: criteria),
+                ]
+            )
+            guard let answer = response.answers[questionID],
+                  let score = answer.score,
+                  let confidence = answer.confidence
+            else {
+                throw CashWeightError.missingScore
+            }
+            samples.append(CashWeightSample(score: score, confidence: confidence, inputTokens: response.usage.inputTokens))
+            model = response.model
+            requestJSON = request
+            responseJSONs.append(responseJSON)
         }
-        let weight = resolve(score: score, confidence: confidence)
+        let count = Double(samples.count)
+        let weight = resolve(
+            score: samples.map(\.score).reduce(0, +) / count,
+            confidence: samples.map(\.confidence).reduce(0, +) / count
+        )
         try store.save(
             CashWeightRecord(
-                day: day,
+                day: snapshot.asOf,
                 calledAt: Date(),
-                model: response.model,
-                inputTokens: response.usage.inputTokens,
+                model: model,
+                inputTokens: samples.map(\.inputTokens).reduce(0, +),
                 snapshot: snapshot,
                 fraction: weight.fraction,
                 score: weight.score,
@@ -119,7 +135,8 @@ struct CashWeight {
                 heldPrevious: weight.heldPrevious,
                 previousFraction: previousFraction,
                 requestJSON: requestJSON,
-                responseJSON: responseJSON
+                responseJSON: "[\n" + responseJSONs.joined(separator: ",\n") + "\n]",
+                samples: samples
             )
         )
         return weight

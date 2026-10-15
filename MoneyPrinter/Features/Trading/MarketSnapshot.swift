@@ -194,19 +194,37 @@ extension KoreaInvestmentAPIService {
         return try MarketSnapshot(bars: bars)
     }
 
-    func makeKODEX200Snapshot() async throws -> MarketSnapshot {
-        try await makeDomesticETFSnapshot(stockCode: Self.kodex200)
+    /// 정규장은 15:30에 끝납니다. 일봉 종가가 반영될 여유를 두고 이 시각부터 오늘 일봉을 확정된 것으로 봅니다. 서울 기준입니다.
+    static let closedBarHour = 15
+    static let closedBarMinute = 40
+
+    /// `closedOnly`가 참이면, 아직 장이 끝나지 않은 오늘 일봉을 빼고 직전 거래일 종가까지로 계산합니다.
+    func makeKODEX200Snapshot(closedOnly: Bool = false) async throws -> MarketSnapshot {
+        try await makeDomesticETFSnapshot(stockCode: Self.kodex200, closedOnly: closedOnly)
     }
 
-    func makeKODEXUSSP500HSnapshot() async throws -> MarketSnapshot {
-        try await makeDomesticETFSnapshot(stockCode: Self.kodexUSSP500H)
+    func makeKODEXUSSP500HSnapshot(closedOnly: Bool = false) async throws -> MarketSnapshot {
+        try await makeDomesticETFSnapshot(stockCode: Self.kodexUSSP500H, closedOnly: closedOnly)
     }
 
-    private func makeDomesticETFSnapshot(stockCode: String) async throws -> MarketSnapshot {
-        let bars = try await fetchDomesticDailyBars(
+    private func makeDomesticETFSnapshot(stockCode: String, closedOnly: Bool) async throws -> MarketSnapshot {
+        var bars = try await fetchDomesticDailyBars(
             stockCode: stockCode,
-            tradingDays: MarketSnapshot.requiredBarCount
+            tradingDays: MarketSnapshot.requiredBarCount + 1
         )
+        if closedOnly, let open = Self.openSessionDay(), bars.last?.date == open {
+            bars.removeLast()
+        }
         return try MarketSnapshot(bars: bars, ticker: stockCode)
+    }
+
+    /// 오늘 일봉이 아직 확정되지 않았으면 오늘 날짜(`yyyyMMdd`)를 돌려줍니다.
+    private static func openSessionDay(now: Date = Date()) -> String? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul") ?? .current
+        let parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+        let minutes = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        guard minutes < closedBarHour * 60 + closedBarMinute else { return nil }
+        return String(format: "%04d%02d%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 }
